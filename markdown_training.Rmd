@@ -66,9 +66,9 @@ with(bg_chem, plot(CTD_Depth, CTD_Temperature))
 Note, below, URL is assigned to a variable for later use in the script. Also, it runs better. 
 ```{r}
 # Read and plot data from doi:10.18739/A25T3FZ8X
-bg_chem_url <- "https://arcticdata.io/metacat/d1/mn/v2/object/urn%3Auuid%3A35ad7624-b159-4e29-a700-0c0770419941"
-bg_chem = read.csv(bg_chem_url, stringsAsFactors = FALSE)
-plot(bg_chem$CTD_Depth, bg_chem$CTD_Temperature)
+#bg_chem_url <- "https://arcticdata.io/metacat/d1/mn/v2/object/urn%3Auuid%3A35ad7624-b159-4e29-a700-0c0770419941"
+#bg_chem = read.csv(bg_chem_url, stringsAsFactors = FALSE)
+#plot(bg_chem$CTD_Depth, bg_chem$CTD_Temperature)
 ```
 
 #Using a DOI instead of the URL to access data
@@ -171,7 +171,7 @@ the result of one function is returned and used in the outer function
 executing a function is calling a function
 each time you execute a function from the inside out, the entire nested block is called a "call stack" returning up the stack, the lowest call is the one first executed
 
-#GIT and GIThub
+## 9. GIT and GIThub
 "commit" use this to push your git repository ot Github into the cloud 
 "branch and "merge" are more advanced topic in verison control
 "tags" are used as bookmarks in your code These are useful for showing what code/model was used to get a certain published result. 
@@ -199,12 +199,51 @@ you are only seeing the current version,
  - 4. commit the changes to the local repository
  - 5. push to the remote repository 
 
+##10. Data Modeling and Tidy Data
+The most useful and frequently join is the *left join*, where the left hand table needs information for its records from a right hand table, only importing information from the right that is a match to left. So you take a subset on the right, the records that match the left table. Note, right and left joins do *the same thing*, and depend on what table is coded first. So we could just use the left join. 
+*inner join* subset the records for which there is information on the left and right tables. 
+*full join* takes all records from left and right regardless of mathing information. 
 
 
-```{r}
+##11. Data cleaning and manipulation
+Tidy data is usually long format
+Good reasons for wide format (years in column for example) easy for data entry, presentations, quick look at trends, etc. but when making calculations, it's really hard to do in the wide format. 
 
+*switching from wide to tall (long) format using tidyr*
 
+In this lesson we’re going to walk through the functions you’ll most commonly use from the dplyr and tidyr packages:
 
+dplyr
+   
+   - mutate()
+   - group_by()
+   - summarise()
+   - select()
+   - filter()
+   - arrange()
+   - left_join()
+   - rename()
+tidyr
+   
+   - gather()
+   - spread()
+   - extract()
+   - separate()
+   
+The dplyr and tidyr have conflicts in function names associated with basic R stats package related to filter and lag. You can avoide this by using two colons 
+PackageName::FunctionName
+
+Reading in the data from [Mike Byerly. 2016. Alaska commercial salmon catches by management region (1886- 1997). Gulf of Alaska Data Portal. df35b.304.2](https://knb.ecoinformatics.org/#view/df35b.304.2)
+
+**IMPORTANT reading in csv that works across windows and mac OS**
+read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1", method = "libcurl"),stringsAsFactors = FALSE)
+
+```{r, warning = F, message=F, }
+library(dplyr)
+library(tidyr)
+catch_df <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1", method = "libcurl"),stringsAsFactors = FALSE)
+head(catch_df)
 ```
+
 
 
