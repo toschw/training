@@ -1,0 +1,210 @@
+---
+title: "RMarkdown Lesson"
+author: "Tobias Schwoerer"
+date: "August 14, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#Content
+
+This is a list for the sections of *a paper*. Make sure to add an empty line before the list otherwise the list won't show. Also make sure a space is preceding the name of the list item. 
+
+- Introduction to the species
+- Methods
+
+If using sub items, make sure exactly 4 spaces precede the minus sign for the list
+
+- Results
+    - First analysis
+    - Second analysis
+
+
+To quickly add a code chunk press ctrl, alt, i or on a mac command, alt, i
+```{r}
+x <- 20
+y <- 345
+z <- x*y
+z
+```
+
+# Function Introduction
+
+function_name(argument_name1 = argument_value1, argument_name2 = argument_value2, ...)
+
+read.csv
+to get help type ?read.csv into the console, single question mark only works with the exact name of the function, use double ?? to search the help pages text make sure to use "search text"
+
+Value section in the help files shows ou what you get back from the function
+In each function the required arguments won't have an equal sign. SO for read.csv we just need to name file.
+
+- relative paths tells R the path to the file, using R Markdown it's always relative to where the Rmd file is. 
+To see the options for importing data in a submenu, type the "" then hit tab (not space) and select the data from the sub folder probably called data or raw_data in case I wanted to generate any derived data files. WORKFLOW: keep data in the folder below the folder where the Rmd file is stored 
+
+absolute paths (which will start with your home directory ~/  )
+
+```{r}
+bg_chem <- read.csv("data_raw/BGchem2008data.csv")
+```
+the head() function prints the first 6 rows, the summary function shows the descriptive stats
+```{r}
+head(bg_chem)
+summary(bg_chem)
+```
+
+
+```{r}
+with(bg_chem, plot(CTD_Depth, CTD_Temperature))
+```
+
+#Accessing and using data from a repository (archive)
+
+Note, below, URL is assigned to a variable for later use in the script. Also, it runs better. 
+```{r}
+# Read and plot data from doi:10.18739/A25T3FZ8X
+bg_chem_url <- "https://arcticdata.io/metacat/d1/mn/v2/object/urn%3Auuid%3A35ad7624-b159-4e29-a700-0c0770419941"
+bg_chem = read.csv(bg_chem_url, stringsAsFactors = FALSE)
+plot(bg_chem$CTD_Depth, bg_chem$CTD_Temperature)
+```
+
+#Using a DOI instead of the URL to access data
+where the data (just like a published paper) has a doi. Doi is more stable than using URL. The data may be moved from one archive to another (URL no longer works) but will retain the doi for that version of the data used for analysis. This is reason for using this doi approach instead of typing the URL into the script. 
+
+
+
+```{r}
+library(dataone)
+library(datapack)
+```
+
+One way to connect to a data repository is using 'D1Client' a proxy for a repository, 2 argument, which data from the PROD, production,  environment for access to datawhich repository
+```{r}
+client <- D1Client("PROD", "urn:node:KNB")
+```
+
+and then we use that client object to access the entire 'DataPackage", which includes both the data from all of the data from all of the data files as well as the metadata that describes the data. 
+
+```{r}
+doi <- "doi:10.5063/F1Z036CP"
+client <- D1Client("PROD", "urn:node:KNB")
+pkg <- getDataPackage(client, doi)
+```
+
+Grabbing the data for the csv file from that package:
+
+```{r}
+getIdentifiers(pkg)
+do <- getMember(pkg, getIdentifiers(pkg)[3])
+csvtext <- rawToChar(getData(do))
+dframe <- read.csv(textConnection(csvtext), stringsAsFactors = FALSE)
+head(dframe)
+```
+
+We can also use R for uploading data to the repository, but it is more efficient to use the online submission tool (metadata required) to do this for one file, unless, this file is updated every other time with new data. 
+
+
+#FUNCTIONS
+What are function and why do we use them? 
+
+**Code should be DRY - Don't repeat yourself!**
+
+Everytime you repear something, think about creating a function, it's also a good way to organize your code. 
+
+Functions are just like variables or objects in R and you need to define them. Use keyword function to define the function and the braces show what the function does, the bloakc of code being executed. In the case below, we have one argument. 
+
+
+```{r}
+x<- 2
+x+2
+
+plustwo <- function(x) {return (x+2)}
+#examples of use
+plustwo(4)
+plustwo(8)
+```
+
+Airtemperature conversion example
+ 
+ - how not to do it
+```{r}
+airtemps <- c(212,30.3, 78, 32)
+celsius1 <- (airtemps[1]-32)*5/9
+celsius2 <- (airtemps[2]-32)*5/9
+```
+
+- how to do it with a function
+```{r}
+FtoC <- function(fahr) {
+  celsius <- (fahr-32)*5/9
+  return(celsius)
+}
+```
+
+In mathematics, this is a function: y = 2x+3
+In computer science, y is the return value and 2x+3 is the function 
+in computer science we could code
+y = line(4)
+
+```{r}
+line <- function(x) {
+  y = 2*x +3
+  return(y)
+}
+line(4)
+```
+
+If you have functions you want to use in different files such as Rmd files, then you save the function in a separate file and call it from within the code. You can also create a package yourself and call that. The former uses "source" and the latter uses "library"
+
+Make sure to create an R-script and never use an Rmd file as the file that defines the function. 
+
+Let's do nested functions
+y = 2x+3
+x = add constant(z)
+y = line(add constant(5))
+line "of" add constant "of" 5
+the result of one function is returned and used in the outer function
+
+executing a function is calling a function
+each time you execute a function from the inside out, the entire nested block is called a "call stack" returning up the stack, the lowest call is the one first executed
+
+#GIT and GIThub
+"commit" use this to push your git repository ot Github into the cloud 
+"branch and "merge" are more advanced topic in verison control
+"tags" are used as bookmarks in your code These are useful for showing what code/model was used to get a certain published result. 
+
+*when to commit*
+Plan development steps, then commit after each step is completed. 
+
+*working with git*
+you are only seeing the current version, 
+
+ - **add** the files you want to save to the staging
+ - then those files are committed to the local repository
+ - push the local repository to the remote respository
+ 
+ hidden folders, never go in there, they start with a dot .
+
+
+ To create a repository go to Git Hub, press upper RH plus sign to add repository, make sure to click initialize at the bottom and choose R below in the gitignore
+
+*Working with git collaboratively:*
+
+ - 1. pull to get the latest versions
+ - 2. work
+ - 3. pull ( before you commit to avoid conflicts with changes others have made) 
+ - 4. commit the changes to the local repository
+ - 5. push to the remote repository 
+
+
+
+```{r}
+
+
+
+```
+
+
