@@ -61,16 +61,21 @@ ggplot(median_esc, aes(Species, median_escapement)) +
 ```
 
 # Now work on building a map
-We are starting from daily escapement data again, and finding the unique locations at which escapement was measured. 
+We are starting from daily escapement data again, and finding the unique locations at which escapement was measured. First find unique location points. Make sure to remember to deal with missing vlaues in the location field. 
 
-## First find unique location points
+## Food example of a nice datatable with filters and download buttons
+Find out more here https://rstudio.github.io/DT/
 
-Make sure to remember to deal with missing vlaues in the location field. 
 ```{r}
 location <- esc %>% 
   distinct(Location, Latitude, Longitude) %>% 
   drop_na()
-datatable(location)
+datatable(location, filter='top', 
+          extensions = 'Buttons', options = list(
+    dom = 'Bfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+  )
+)
 ```
 
 ## Draw the map
@@ -88,6 +93,7 @@ locs <- location %>% mutate(Longitude = abs(Longitude) * -1)
 
 leaflet(locs) %>% 
   addTiles() %>% 
-  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location)
+  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location) %>% 
+  addProviderTiles(providers$Stamen.TerrainBackground)
 ```
 
