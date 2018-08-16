@@ -9,6 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+#about knitting
+Knitting is a good way to test your code. It uses its separate environment, so you don't need to clean the environment before knitting. 
+
+#Examples for R markdown use
 
 #Content
 
@@ -245,5 +249,69 @@ catch_df <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df3
 head(catch_df)
 ```
 
+##11.4 Data cleaning and manipulation
+Pipe operators are intersted by pressing **ctrl+shift+m**
+the pipe operators pipes the results of one function into a following function, a chain of operations will occur
 
+filtering out rows and select certain columns from a dataset
+cleaning up this datafile
 
+ - drop notes column because text won't be important for our analysis
+ - All column is a marginal sum of species columns we can calculate outselves
+ - data is in wide format because species are in columns
+ 
+select(.data, ...)  keeps only the variables we mention, by using a pipe operator, we don't need the $ operator, or not the columns we want using select(-All, -notesRegCode). 
+
+**Not recommended to use column index numbers** in case the code changes before the select() command  and then you refer to different columns than intended. Using "starts with"" and "ends with" is better, see section useful functions in the help for select()
+
+**Advice on wording objects** over write as much as you can for easier reading of code, also, don't use numbering to discinguish objects, instead add menaing for example name it here: catch_df_select
+ 
+```{r}
+catch_df <- catch_df%>% 
+  select(Region, Year, Chinook, Sockeye, Coho, Pink, Chum)
+```
+ 
+ **Transposing data**
+ flipping wide to long format, since we use %>% we don't need to specify data in gather()
+ if you think key - use column names
+ if you think values - use the values in the columns
+ 
+Here key is the new variable, species, and the value is the catch
+We see that the data shows catch in thousands, so we want to rename the column name
+```{r}
+catch_df <- catch_df%>% 
+  gather(key = "species", value = "catch", -c("Region", "Year"))%>% 
+  rename(catch_thousands = catch)
+```
+ 
+ Reversing this transformation and going from long now back to wide, use the spread commend
+ 
+Creating a column with the actual catch so multiplying the catch_thousand by 1000, insert the head(catch_df) to see the data and maybe more importantly the type of data represented in each column. We see that the catch column is actually character type so we need to coerce it into numeric. If the error message says: **NAs introduced by coercion**, it means that R couldn't completely change into numberic. Do **NOT** ignore this warning even though the code will run. **Consequence** If you ignore, you leave out a bunch of data that should be included in your data. 
+```{r}
+#creating a vector
+catch_integers <- as.integer(catch_df$catch_thousands)
+#this will return all the NAs
+i <- which(is.na(catch_integers)==T)
+#examine what the value of the 401 index is
+catch_df$catch_thousands[i]
+```
+
+The reason why an I is here is that the OCR running on a pdf converted the data into an "I"
+Steps to fix this:
+
+ - 1) turn I into 1
+ - 2) coerce catch_thousands into integer type
+ - 3) convert catch_thousands into catch()
+ 
+ Using 3 different mutate calls in a pipe
+
+```{r}
+catch_df <- catch_df %>%  
+  mutate(catch_thousands = ifelse(catch_thousands=="I",1,catch_thousands)) %>% 
+  mutate(catch_thousands = as.integer(catch_thousands)) %>% 
+  mutate(catch = catch_thousands * 1000) %>% 
+  select(-catch_thousands)
+
+head(catch_df)
+```
+ 
