@@ -1,0 +1,169 @@
+---
+title: "RMarkdown Lesson"
+author: "Tobias Schwoerer"
+date: "August 14, 2018"
+output: html_document
+---
+
+##11. Data cleaning and manipulation
+Tidy data is usually long format
+Good reasons for wide format (years in column for example) easy for data entry, presentations, quick look at trends, etc. but when making calculations, it's really hard to do in the wide format. 
+
+*switching from wide to tall (long) format using tidyr*
+
+In this lesson we’re going to walk through the functions you’ll most commonly use from the dplyr and tidyr packages:
+
+dplyr
+   
+   - mutate()
+   - group_by()
+   - summarise()
+   - select()
+   - filter()
+   - arrange()
+   - left_join()
+   - rename()
+tidyr
+   
+   - gather()
+   - spread()
+   - extract()
+   - separate()
+   
+The dplyr and tidyr have conflicts in function names associated with basic R stats package related to filter and lag. You can avoide this by using two colons 
+PackageName::FunctionName
+
+Reading in the data from [Mike Byerly. 2016. Alaska commercial salmon catches by management region (1886- 1997). Gulf of Alaska Data Portal. df35b.304.2](https://knb.ecoinformatics.org/#view/df35b.304.2)
+
+**IMPORTANT reading in csv that works across windows and mac OS**
+read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1", method = "libcurl"),stringsAsFactors = FALSE)
+
+```{r, warning = F, message=F, }
+library(dplyr)
+library(tidyr)
+catch_df <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1", method = "libcurl"),stringsAsFactors = FALSE)
+head(catch_df)
+```
+
+##11.4 Data cleaning and manipulation
+Pipe operators are intersted by pressing **ctrl+shift+m**
+the pipe operators pipes the results of one function into a following function, a chain of operations will occur
+
+filtering out rows and select certain columns from a dataset
+cleaning up this datafile
+
+ - drop notes column because text won't be important for our analysis
+ - All column is a marginal sum of species columns we can calculate outselves
+ - data is in wide format because species are in columns
+ 
+select(.data, ...)  keeps only the variables we mention, by using a pipe operator, we don't need the $ operator, or not the columns we want using select(-All, -notesRegCode). 
+
+**Not recommended to use column index numbers** in case the code changes before the select() command  and then you refer to different columns than intended. Using "starts with"" and "ends with" is better, see section useful functions in the help for select()
+
+**Advice on wording objects** over write as much as you can for easier reading of code, also, don't use numbering to discinguish objects, instead add menaing for example name it here: catch_df_select
+ 
+```{r}
+catch_df <- catch_df%>% 
+  select(Region, Year, Chinook, Sockeye, Coho, Pink, Chum)
+```
+ 
+ **Transposing data**
+ flipping wide to long format, since we use %>% we don't need to specify data in gather()
+ if you think key - use column names
+ if you think values - use the values in the columns
+ 
+Here key is the new variable, species, and the value is the catch
+We see that the data shows catch in thousands, so we want to rename the column name
+```{r}
+catch_df <- catch_df%>% 
+  gather(key = "species", value = "catch", -c("Region", "Year"))%>% 
+  rename(catch_thousands = catch)
+```
+ 
+ Reversing this transformation and going from long now back to wide, use the spread commend
+ 
+Creating a column with the actual catch so multiplying the catch_thousand by 1000, insert the head(catch_df) to see the data and maybe more importantly the type of data represented in each column. We see that the catch column is actually character type so we need to coerce it into numeric. If the error message says: **NAs introduced by coercion**, it means that R couldn't completely change into numberic. Do **NOT** ignore this warning even though the code will run. **Consequence** If you ignore, you leave out a bunch of data that should be included in your data.
+
+```{r}
+#creating a vector
+catch_integers <- as.integer(catch_df$catch_thousands)
+#this will return all the NAs
+i <- which(is.na(catch_integers)==T)
+#examine what the value of the index is
+catch_df$catch_thousands[i]
+```
+
+The reason why an I is here is that the OCR running on a pdf converted the data into an "I"
+Steps to fix this:
+
+ - 1) turn "I" into 1
+ - 2) coerce catch_thousands into integer type
+ - 3) convert catch_thousands into catch()
+ 
+ Using 3 different mutate calls in a pipe
+
+```{r}
+catch_df <- catch_df %>%  
+  mutate(catch_thousands = ifelse(catch_thousands=="I",1,catch_thousands)) %>% 
+  mutate(catch_thousands = as.integer(catch_thousands)) %>% 
+  mutate(catch = catch_thousands * 1000) %>% 
+  select(-catch_thousands)
+
+head(catch_df)
+# or use tail(catch_df) to see if the changes
+```
+ 
+ 
+#11.9 Data summarization ... split, apply, combine strategy
+Overwrite an object using its initial name in data cleaning processes but once a derived objects is made, use a different name. 
+
+Let's look at the catch range
+
+```{r}
+catch_range <- range(catch_df$catch)
+head(catch_range)
+#range contains the low and the high value encompassing the range, so below we need to refer to the first element for the low of the range and the second element in the vector for the high of the range
+
+catch_range <- catch_df %>% 
+  group_by(Region) %>% 
+  summarize(catch_low = range(catch)[1], catch_high = range(catch)[2])
+
+head(catch_range)
+```
+
+
+```{r}
+catch_mean <- catch_df %>% 
+  group_by(Region,species) %>% 
+  #summarize(catch_mean = mean(catch)) %>% 
+  #use this in case there are any NAs I want to ignore
+  summarize(catch_mean = mean(catch, na.rm = T),
+          catch_stdev = sd(catch, na.rm = T),
+          num_obs = n()) %>% 
+  #filter for chinook
+  #filter(species == "Chinook")
+  #filter for numeric condition
+  filter(catch_mean > 3000)
+
+head(catch_mean)
+```
+
+# Joins
+Importing region codes and descriptions
+
+```{r}
+region_defs <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.303.1", method = "libcurl"),  stringsAsFactors = FALSE)
+```
+
+```{r}
+region_defs <- region_defs %>% 
+  select(code, mgmtArea)
+
+head(region_defs)
+```
+
+```{r}
+catch_join <- left_join(catch_df, region_def, by = c("Region"="code"))
+```
+
+
