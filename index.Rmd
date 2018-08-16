@@ -83,8 +83,8 @@ Using leaflet
 ```{r}
 leaflet(location) %>% 
   addTiles() %>% 
-  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location)
-
+  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location) %>% 
+  addProviderTiles(providers$Esri.WorldImagery)
 ```
 
 Some of the coordinates were wrong entries, need to fix
