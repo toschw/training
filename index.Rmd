@@ -5,26 +5,89 @@ date: "August 16, 2018"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = F)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+suppressPackageStartupMessages({
+  library(leaflet)
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+  library(DT)
+})
 ```
 
-## Including Plots
+# Load salmon data from the knb, then use the local copy and if not present get it from KNB repository 
+import the data from knb, but once it is downloaded we can use it from the local computer, this code looks for a local copy of the data and if it is not there, it will download the data. 
+```{r}
+data_url <- "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/knb.92020.1"
+# data_url <- "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Af119a05b-bbe7-4aea-93c6-85434dcb1c5e"
 
-You can also embed plots, for example:
+esc <- tryCatch(
+    read.csv("data_raw/escapement.csv", stringsAsFactors = FALSE),
+    error=function(cond) {
+        message(paste("Escapement file does not seem to exist, so get it from the KNB."))
+        esc <- read.csv(url(data_url, method = "libcurl"), stringsAsFactors = FALSE)
+        return(esc)
+    }
+)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+head(esc)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+median_esc <- esc %>% 
+  separate(sampleDate, c("Year", "Month", "Day"), sep = "-") %>% 
+  # pulls the hyphen in year month and day and turns it into year column, month, and day
+  group_by(Species, SASAP.Region, Year, Location) %>% 
+  summarize(escapement = sum(DailyCount)) %>% 
+  group_by(Species) %>% 
+  summarize(median_escapement = median(escapement))
+
+head(median_esc)
+```
+
+
+#Plot the escapement as a bar chart
+
+```{r}
+library(cowplot)
+ggplot(median_esc, aes(Species, median_escapement)) +
+  geom_col() +
+  coord_flip()
+
+```
+
+# Now work on building a map
+We are starting from daily escapement data again, and finding the unique locations at which escapement was measured. 
+
+## First find unique location points
+
+Make sure to remember to deal with missing vlaues in the location field. 
+```{r}
+location <- esc %>% 
+  distinct(Location, Latitude, Longitude) %>% 
+  drop_na()
+datatable(location)
+```
+
+## Draw the map
+Using leaflet
+```{r}
+leaflet(location) %>% 
+  addTiles() %>% 
+  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location)
+
+```
+
+Some of the coordinates were wrong entries, need to fix
+```{r}
+locs <- location %>% mutate(Longitude = abs(Longitude) * -1)
+
+leaflet(locs) %>% 
+  addTiles() %>% 
+  addMarkers(~ Longitude, ~ Latitude, popup = ~ Location)
+```
+
